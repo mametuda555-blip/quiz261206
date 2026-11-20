@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>司会・スクリーン画面｜二次会クイズ</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+      margin: 0; background: #0f172a; color: #fff; height: 100vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 32px; background: #1e293b; border-bottom: 2px solid #334155;
+    }
+    .title { font-size: 1.4rem; font-weight: bold; color: #f8fafc; }
+    .stats { display: flex; gap: 24px; font-size: 1.2rem; font-weight: bold; color: #fbbf24; }
+    main {
+      flex: 1; padding: 28px 48px; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; overflow-y: auto;
+    }
+    .screen-box { width: 100%; max-width: 1100px; text-align: center; }
+    .q-badge {
+      display: inline-block; background: #d4af37; color: #0f172a; font-weight: bold;
+      padding: 6px 20px; border-radius: 999px; font-size: 1.2rem; margin-bottom: 16px;
+    }
+    .q-title { font-size: 2.5rem; font-weight: bold; margin: 0 0 32px; line-height: 1.35; }
+    .grid-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
+    .c-card {
+      background: #1e293b; border: 3px solid #475569; border-radius: 16px;
+      padding: 20px 24px; position: relative; overflow: hidden;
+    }
+    .c-card.correct-card { border-color: #22c55e; background: #14532d; }
+    .c-head { display: flex; align-items: center; gap: 16px; font-size: 1.7rem; font-weight: bold; position: relative; z-index: 2; }
+    .c-label {
+      width: 44px; height: 44px; border-radius: 50%; background: #334155; color: #fbbf24;
+      display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0;
+    }
+    .bar-wrap { margin-top: 12px; display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
+    .bar-bg { flex: 1; height: 14px; background: #0f172a; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #38bdf8; transition: width 0.4s; }
+    .correct-card .bar-fill { background: #4ade80; }
+    .bar-count { font-size: 1.2rem; font-weight: bold; min-width: 80px; text-align: right; }
+    .explanation {
+      margin-top: 24px; padding: 16px 24px; background: #1e293b; border-left: 6px solid #fbbf24;
+      font-size: 1.4rem; text-align: left; border-radius: 8px;
+    }
+    /* 1〜20位ランキング（2列） */
+    .rank-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px 32px;
+      width: 100%; max-width: 1000px; text-align: left;
+    }
+    .rank-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #1e293b; padding: 10px 20px; border-radius: 10px; font-size: 1.3rem;
+      border-left: 6px solid #475569;
+    }
+    .rank-row.top1 { border-left-color: #fbbf24; background: #3b2f10; }
+    .rank-row.top2 { border-left-color: #cbd5e1; }
+    .rank-row.top3 { border-left-color: #d97706; }
+    .rank-num { font-weight: bold; width: 65px; color: #fbbf24; }
+    .rank-name { flex: 1; font-weight: bold; }
+    .rank-score { font-weight: bold; color: #38bdf8; }
+
+    /* 下部コントロールバー */
+    footer {
+      background: #020617; padding: 12px 24px; display: flex; justify-content: space-between;
+      align-items: center; border-top: 1px solid #334155; flex-wrap: wrap; gap: 8px;
+    }
+    .ctrl-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold;
+      font-size: 0.95rem; cursor: pointer; background: #334155; color: #fff;
+    }
+    button:hover { opacity: 0.85; }
+    button.active { background: #2563eb; outline: 2px solid #93c5fd; }
+    button.btn-open { background: #059669; }
+    button.btn-close { background: #d97706; }
+    button.btn-ans { background: #dc2626; }
+    button.btn-rank { background: #7c3aed; }
+    button.btn-danger { background: #7f1d1d; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">Wedding Party Quiz</div>
+    <div class="stats">
+      <span id="statUsers">参加者: 0人</span>
+      <span id="statAnswers">回答数: 0 / 0</span>
+    </div>
+  </header>
+
+  <main>
+    <div id="screenBox" class="screen-box"></div>
+  </main>
+
+  <footer>
+    <div class="ctrl-group">
+      <button id="btnWait">待機画面</button>
+      <button id="btnOpen" class="btn-open">① 受付開始</button>
+      <button id="btnClose" class="btn-close">② 締切（集計）</button>
+      <button id="btnAns" class="btn-ans">③ 正解発表</button>
+      <button id="btnRank" class="btn-rank">★ 1〜20位発表</button>
+    </div>
+    <div class="ctrl-group">
+      <button id="btnPrev">◀ 前の問題</button>
+      <span id="qCounter" style="align-self:center; padding:0 8px; font-weight:bold;">Q1</span>
+      <button id="btnNext">次の問題 ▶</button>
+      <button id="btnReset" class="btn-danger">全データ削除</button>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { firebaseConfig, ADMIN_PIN, QUESTIONS } from "./config.js";
+
+    // 簡易PINチェック
+    if (sessionStorage.getItem("admin_ok") !== "1") {
+      const input = prompt("司会用パスワード（PIN）を入力してください");
+      if (input !== ADMIN_PIN) {
+        document.body.innerHTML = "<h2 style='padding:40px;'>パスワードが違います。ページを再読み込みしてください。</h2>";
+        throw new Error("Auth failed");
+      }
+      sessionStorage.setItem("admin_ok", "1");
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const LABELS = ["A", "B", "C", "D"];
+
+    let state = { phase: "waiting", questionIndex: 0 };
+    let users = {};
+    let answers = {};
+
+    const screenBox = document.getElementById("screenBox");
+    const statUsers = document.getElementById("statUsers");
+    const statAnswers = document.getElementById("statAnswers");
+    const qCounter = document.getElementById("qCounter");
+
+    function updateState(next) {
+      set(ref(db, "state"), { ...state, ...next });
+    }
+
+    document.getElementById("btnWait").onclick = () => updateState({ phase: "waiting" });
+    document.getElementById("btnOpen").onclick = () => updateState({ phase: "open" });
+    document.getElementById("btnClose").onclick = () => updateState({ phase: "closed" });
+    document.getElementById("btnAns").onclick = () => updateState({ phase: "answer" });
+    document.getElementById("btnRank").onclick = () => updateState({ phase: "ranking" });
+    document.getElementById("btnPrev").onclick = () => {
+      if (state.questionIndex > 0) updateState({ questionIndex: state.questionIndex - 1, phase: "open" });
+    };
+    document.getElementById("btnNext").onclick = () => {
+      if (state.questionIndex < QUESTIONS.length - 1) updateState({ questionIndex: state.questionIndex + 1, phase: "open" });
+    };
+    document.getElementById("btnReset").onclick = async () => {
+      if (confirm("参加者と回答データをすべて削除しますか？（本番前リセット・終了後削除用）")) {
+        await remove(ref(db, "users"));
+        await remove(ref(db, "answers"));
+        await set(ref(db, "state"), { phase: "waiting", questionIndex: 0 });
+        alert("データを完全に削除しました。");
+      }
+    };
+
+    onValue(ref(db, "state"), (s) => { state = s.val() || { phase: "waiting", questionIndex: 0 }; render(); });
+    onValue(ref(db, "users"), (s) => { users = s.val() || {}; render(); });
+    onValue(ref(db, "answers"), (s) => { answers = s.val() || {}; render(); });
+
+    function render() {
+      const userCount = Object.keys(users).length;
+      const curAns = answers[state.questionIndex] || {};
+      const ansCount = Object.keys(curAns).length;
+
+      statUsers.textContent = `参加者: ${userCount}人`;
+      statAnswers.textContent = `回答数: ${ansCount} / ${userCount}`;
+      qCounter.textContent = `Q${state.questionIndex + 1} / ${QUESTIONS.length}`;
+
+      screenBox.innerHTML = "";
+      const q = QUESTIONS[state.questionIndex];
+
+      if (state.phase === "waiting") {
+        screenBox.innerHTML = `
+          <div class="q-badge">WELCOME</div>
+          <h1 class="q-title" style="font-size:3.2rem;">新郎新婦クイズ大会！</h1>
+          <p style="font-size:1.6rem; color:#cbd5e1;">お手元のスマホからニックネームを登録してお待ちください</p>
+        `;
+        return;
+      }
+
+      if (state.phase === "open" || state.phase === "closed" || state.phase === "answer") {
+        const showBars = (state.phase === "closed" || state.phase === "answer");
+        const showAns = (state.phase === "answer");
+        const counts = [0, 0, 0, 0];
+        Object.values(curAns).forEach((c) => { if (counts[c] !== undefined) counts[c]++; });
+
+        const badge = document.createElement("div");
+        badge.className = "q-badge";
+        badge.textContent = `第 ${state.questionIndex + 1} 問` + (state.phase === "open" ? "（回答受付中）" : state.phase === "closed" ? "（回答締切）" : "（正解発表）");
+
+        const title = document.createElement("h1");
+        title.className = "q-title";
+        title.textContent = q.text;
+
+        const grid = document.createElement("div");
+        grid.className = "grid-choices";
+
+        q.choices.forEach((choiceText, idx) => {
+          const card = document.createElement("div");
+          card.className = "c-card" + (showAns && idx === q.answer ? " correct-card" : "");
+
+          const head = document.createElement("div");
+          head.className = "c-head";
+          const lbl = document.createElement("span");
+          lbl.className = "c-label";
+          lbl.textContent = LABELS[idx];
+          const txt = document.createElement("span");
+          txt.textContent = choiceText;
+          head.append(lbl, txt);
+          card.appendChild(head);
+
+          if (showBars) {
+            const pct = ansCount > 0 ? Math.round((counts[idx] / ansCount) * 100) : 0;
+            const barWrap = document.createElement("div");
+            barWrap.className = "bar-wrap";
+            barWrap.innerHTML = `
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <div class="bar-count">${counts[idx]}人 (${pct}%)</div>
+            `;
+            card.appendChild(barWrap);
+          }
+          grid.appendChild(card);
+        });
+
+        screenBox.append(badge, title, grid);
+
+        if (showAns && q.explanation) {
+          const exp = document.createElement("div");
+          exp.className = "explanation";
+          exp.textContent = q.explanation;
+          screenBox.appendChild(exp);
+        }
+        return;
+      }
+
+      if (state.phase === "ranking") {
+        const scores = Object.entries(users).map(([uid, u]) => {
+          let score = 0;
+          QUESTIONS.forEach((item, idx) => {
+            if (answers[idx] && answers[idx][uid] === item.answer) score++;
+          });
+          return { name: u.name, score };
+        }).sort((a, b) => b.score - a.score);
+
+        let rank = 1;
+        scores.forEach((s, i) => {
+          if (i > 0 && s.score < scores[i - 1].score) rank = i + 1;
+          s.rank = rank;
+        });
+
+        // 1〜20位（20位タイ含む）を抽出
+        const top20 = scores.filter((s) => s.rank <= 20);
+
+        const badge = document.createElement("div");
+        badge.className = "q-badge";
+        badge.textContent = "FINAL RANKING（1〜20位）";
+
+        const grid = document.createElement("div");
+        grid.className = "rank-grid";
+
+        top20.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "rank-row" + (item.rank === 1 ? " top1" : item.rank === 2 ? " top2" : item.rank === 3 ? " top3" : "");
+          const rNum = document.createElement("span");
+          rNum.className = "rank-num";
+          rNum.textContent = `${item.rank}位`;
+          const rName = document.createElement("span");
+          rName.className = "rank-name";
+          rName.textContent = item.name;
+          const rScore = document.createElement("span");
+          rScore.className = "rank-score";
+          rScore.textContent = `${item.score} 点`;
+          row.append(rNum, rName, rScore);
+          grid.appendChild(row);
+        });
+
+        screenBox.append(badge, grid);
+      }
+    }
+  </script>
+</body>
+</html>
