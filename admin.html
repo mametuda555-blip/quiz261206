@@ -3,107 +3,138 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>司会・スクリーン画面｜二次会クイズ</title>
+  <title>司会・管理画面｜二次会クイズ</title>
   <style>
     * { box-sizing: border-box; }
     body {
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
-      margin: 0; background: #0f172a; color: #fff; height: 100vh;
-      display: flex; flex-direction: column; overflow: hidden;
+      margin: 0; background: #0f172a; color: #fff;
+      min-height: 100vh; display: flex; flex-direction: column;
     }
     header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 32px; background: #1e293b; border-bottom: 2px solid #334155;
+      padding: 12px 16px; background: #1e293b; border-bottom: 2px solid #334155;
+      flex-wrap: wrap; gap: 8px;
     }
-    .title { font-size: 1.4rem; font-weight: bold; color: #f8fafc; }
-    .stats { display: flex; gap: 24px; font-size: 1.2rem; font-weight: bold; color: #fbbf24; }
-    main {
-      flex: 1; padding: 28px 48px; display: flex; flex-direction: column;
-      justify-content: center; align-items: center; overflow-y: auto;
-    }
-    .screen-box { width: 100%; max-width: 1100px; text-align: center; }
-    .q-badge {
-      display: inline-block; background: #d4af37; color: #0f172a; font-weight: bold;
-      padding: 6px 20px; border-radius: 999px; font-size: 1.2rem; margin-bottom: 16px;
-    }
-    .q-title { font-size: 3.2rem; font-weight: bold; margin: 0 0 36px; line-height: 1.3; }
-    .grid-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; text-align: center; }
-    .c-card {
-      background: #1e293b; border: 3px solid #475569; border-radius: 16px;
-      padding: 28px 24px; position: relative; overflow: hidden;
-    }
-    .c-card.correct-card { border-color: #22c55e; background: #14532d; }
-    .c-num { font-size: 3rem; font-weight: bold; color: #fbbf24; }
-    .correct-card .c-num { color: #4ade80; }
-    .bar-wrap { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
-    .bar-bg { flex: 1; height: 16px; background: #0f172a; border-radius: 999px; overflow: hidden; }
-    .bar-fill { height: 100%; background: #38bdf8; transition: width 0.4s; }
-    .correct-card .bar-fill { background: #4ade80; }
-    .bar-count { font-size: 1.3rem; font-weight: bold; min-width: 90px; text-align: right; }
+    .title { font-size: 1.1rem; font-weight: bold; color: #f8fafc; }
+    .stats { display: flex; gap: 12px; font-size: 0.95rem; font-weight: bold; color: #fbbf24; }
 
-    /* 1〜20位ランキング（2列） */
-    .rank-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px 32px;
-      width: 100%; max-width: 1000px; text-align: left;
+    /* 操作パネル（スマホで押しやすい配置） */
+    .controls {
+      background: #020617; padding: 12px 16px; border-bottom: 1px solid #334155;
+      display: flex; flex-direction: column; gap: 10px;
     }
-    .rank-row {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #1e293b; padding: 10px 20px; border-radius: 10px; font-size: 1.3rem;
-      border-left: 6px solid #475569;
+    .ctrl-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
     }
-    .rank-row.top1 { border-left-color: #fbbf24; background: #3b2f10; }
-    .rank-row.top2 { border-left-color: #cbd5e1; }
-    .rank-row.top3 { border-left-color: #d97706; }
-    .rank-num { font-weight: bold; width: 65px; color: #fbbf24; }
-    .rank-name { flex: 1; font-weight: bold; }
-    .rank-score { font-weight: bold; color: #38bdf8; }
-
-    /* 下部コントロールバー */
-    footer {
-      background: #020617; padding: 12px 24px; display: flex; justify-content: space-between;
-      align-items: center; border-top: 1px solid #334155; flex-wrap: wrap; gap: 8px;
+    .ctrl-row.nav-row {
+      grid-template-columns: 1fr auto 1fr; align-items: center;
     }
-    .ctrl-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ctrl-row.sub-row {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
     button {
-      padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold;
-      font-size: 0.95rem; cursor: pointer; background: #334155; color: #fff;
+      padding: 12px 8px; border: none; border-radius: 8px; font-weight: bold;
+      font-size: 0.9rem; cursor: pointer; background: #334155; color: #fff;
+      touch-action: manipulation;
     }
-    button:hover { opacity: 0.85; }
+    button:active { opacity: 0.75; }
     button.btn-open { background: #059669; }
     button.btn-close { background: #d97706; }
     button.btn-ans { background: #dc2626; }
     button.btn-rank { background: #7c3aed; }
     button.btn-danger { background: #7f1d1d; font-size: 0.85rem; }
+    #qCounter { text-align: center; font-weight: bold; font-size: 1rem; padding: 0 8px; color: #fbbf24; }
+
+    /* メイン表示エリア */
+    main {
+      flex: 1; padding: 20px 16px 40px; display: flex; flex-direction: column;
+      align-items: center;
+    }
+    .screen-box { width: 100%; max-width: 1000px; text-align: center; }
+    .q-badge {
+      display: inline-block; background: #d4af37; color: #0f172a; font-weight: bold;
+      padding: 4px 16px; border-radius: 999px; font-size: 0.95rem; margin-bottom: 12px;
+    }
+    .q-title { font-size: 2rem; font-weight: bold; margin: 0 0 20px; line-height: 1.3; }
+
+    .grid-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center; }
+    .c-card {
+      background: #1e293b; border: 3px solid #475569; border-radius: 14px;
+      padding: 16px 12px;
+    }
+    .c-card.correct-card { border-color: #22c55e; background: #14532d; }
+    .c-num { font-size: 2.2rem; font-weight: bold; color: #fbbf24; }
+    .correct-card .c-num { color: #4ade80; }
+    .bar-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .bar-bg { width: 100%; height: 12px; background: #0f172a; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #38bdf8; transition: width 0.4s; }
+    .correct-card .bar-fill { background: #4ade80; }
+    .bar-count { font-size: 0.95rem; font-weight: bold; }
+
+    /* 1〜20位ランキング（スマホ1列 / PC2列） */
+    .rank-grid {
+      display: grid; grid-template-columns: 1fr; gap: 8px;
+      width: 100%; text-align: left;
+    }
+    .rank-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #1e293b; padding: 12px 16px; border-radius: 10px; font-size: 1.1rem;
+      border-left: 6px solid #475569;
+    }
+    .rank-row.top1 { border-left-color: #fbbf24; background: #3b2f10; }
+    .rank-row.top2 { border-left-color: #cbd5e1; }
+    .rank-row.top3 { border-left-color: #d97706; }
+    .rank-num { font-weight: bold; width: 55px; color: #fbbf24; }
+    .rank-name { flex: 1; font-weight: bold; word-break: break-all; padding-right: 8px; }
+    .rank-score { font-weight: bold; color: #38bdf8; white-space: nowrap; }
+
+    /* PC・プロジェクター向け（画面幅768px以上） */
+    @media (min-width: 768px) {
+      header { padding: 16px 32px; }
+      .title { font-size: 1.4rem; }
+      .stats { font-size: 1.2rem; gap: 24px; }
+      .controls { flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 32px; }
+      .ctrl-row { display: flex; gap: 8px; }
+      .q-title { font-size: 3rem; margin-bottom: 32px; }
+      .c-card { padding: 28px 24px; }
+      .c-num { font-size: 3rem; }
+      .bar-wrap { flex-direction: row; align-items: center; }
+      .bar-count { min-width: 90px; text-align: right; font-size: 1.2rem; }
+      .rank-grid { grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="title">Wedding Party Quiz</div>
+    <div class="title">Wedding Quiz 管理</div>
     <div class="stats">
       <span id="statUsers">参加者: 0人</span>
-      <span id="statAnswers">回答数: 0 / 0</span>
+      <span id="statAnswers">回答: 0 / 0</span>
     </div>
   </header>
+
+  <section class="controls">
+    <div class="ctrl-row">
+      <button id="btnOpen" class="btn-open">① 受付開始</button>
+      <button id="btnClose" class="btn-close">② 締切</button>
+      <button id="btnAns" class="btn-ans">③ 正解発表</button>
+    </div>
+    <div class="ctrl-row nav-row">
+      <button id="btnPrev">◀ 前の問題</button>
+      <span id="qCounter">Q1 / 10</span>
+      <button id="btnNext">次の問題 ▶</button>
+    </div>
+    <div class="ctrl-row sub-row">
+      <button id="btnWait">待機画面</button>
+      <button id="btnRank" class="btn-rank">★ 順位発表</button>
+      <button id="btnReset" class="btn-danger">全データ削除</button>
+    </div>
+  </section>
 
   <main>
     <div id="screenBox" class="screen-box"></div>
   </main>
-
-  <footer>
-    <div class="ctrl-group">
-      <button id="btnWait">待機画面</button>
-      <button id="btnOpen" class="btn-open">① 受付開始</button>
-      <button id="btnClose" class="btn-close">② 締切（集計）</button>
-      <button id="btnAns" class="btn-ans">③ 正解発表</button>
-      <button id="btnRank" class="btn-rank">★ 1〜20位発表</button>
-    </div>
-    <div class="ctrl-group">
-      <button id="btnPrev">◀ 前の問題</button>
-      <span id="qCounter" style="align-self:center; padding:0 8px; font-weight:bold;">Q1</span>
-      <button id="btnNext">次の問題 ▶</button>
-      <button id="btnReset" class="btn-danger">全データ削除</button>
-    </div>
-  </footer>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -165,7 +196,7 @@
       const ansCount = Object.keys(curAns).length;
 
       statUsers.textContent = `参加者: ${userCount}人`;
-      statAnswers.textContent = `回答数: ${ansCount} / ${userCount}`;
+      statAnswers.textContent = `回答: ${ansCount} / ${userCount}`;
       qCounter.textContent = `Q${state.questionIndex + 1} / ${QUESTIONS.length}`;
 
       screenBox.innerHTML = "";
@@ -175,7 +206,7 @@
         screenBox.innerHTML = `
           <div class="q-badge">WELCOME</div>
           <h1 class="q-title">新郎新婦クイズ大会！</h1>
-          <p style="font-size:1.6rem; color:#cbd5e1;">お手元のスマホからニックネームを登録してお待ちください</p>
+          <p style="font-size:1.1rem; color:#cbd5e1;">お手元のスマホからニックネームを登録してお待ちください</p>
         `;
         return;
       }
@@ -238,75 +269,6 @@
           s.rank = rank;
         });
 
-        const top20 = scores.filter((s) => s.rank <= 20);
-
-        const badge = document.createElement("div");
-        badge.className = "q-badge";
-        badge.textContent = "FINAL RANKING（1〜20位）";
-
-        const grid = document.createElement("div");
-        grid.className = "rank-grid";
-
-        top20.forEach((item) => {
-          const row = document.createElement("div");
-          row.className = "rank-row" + (item.rank === 1 ? " top1" : item.rank === 2 ? " top2" : item.rank === 3 ? " top3" : "");
-          const rNum = document.createElement("span");
-          rNum.className = "rank-num";
-          rNum.textContent = `${item.rank}位`;
-          const rName = document.createElement("span");
-          rName.className = "rank-name";
-          rName.textContent = item.name;
-          const rScore = document.createElement("span");
-          rScore.className = "rank-score";
-          rScore.textContent = `${item.score} 点`;
-          row.append(rNum, rName, rScore);
-          grid.appendChild(row);
-        });
-
-        screenBox.append(badge, grid);
-      }
-    }
-  </script>
-</body>
-</html>
-     const barWrap = document.createElement("div");
-            barWrap.className = "bar-wrap";
-            barWrap.innerHTML = `
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-              <div class="bar-count">${counts[idx]}人 (${pct}%)</div>
-            `;
-            card.appendChild(barWrap);
-          }
-          grid.appendChild(card);
-        });
-
-        screenBox.append(badge, title, grid);
-
-        if (showAns && q.explanation) {
-          const exp = document.createElement("div");
-          exp.className = "explanation";
-          exp.textContent = q.explanation;
-          screenBox.appendChild(exp);
-        }
-        return;
-      }
-
-      if (state.phase === "ranking") {
-        const scores = Object.entries(users).map(([uid, u]) => {
-          let score = 0;
-          QUESTIONS.forEach((item, idx) => {
-            if (answers[idx] && answers[idx][uid] === item.answer) score++;
-          });
-          return { name: u.name, score };
-        }).sort((a, b) => b.score - a.score);
-
-        let rank = 1;
-        scores.forEach((s, i) => {
-          if (i > 0 && s.score < scores[i - 1].score) rank = i + 1;
-          s.rank = rank;
-        });
-
-        // 1〜20位（20位タイ含む）を抽出
         const top20 = scores.filter((s) => s.rank <= 20);
 
         const badge = document.createElement("div");
