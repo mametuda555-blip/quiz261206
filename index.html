@@ -25,29 +25,22 @@
       width: 100%; padding: 14px; font-size: 1.1rem; font-weight: bold;
       background: #1e3a5f; color: #fff; border: none; border-radius: 10px; cursor: pointer;
     }
-    .q-header { font-size: 0.95rem; font-weight: bold; color: #b48a3e; margin-bottom: 8px; }
-    .q-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; line-height: 1.5; }
-    .choices { display: flex; flex-direction: column; gap: 12px; }
+    .q-text { font-size: 1.8rem; font-weight: bold; color: #1e3a5f; margin: 8px 0 24px; }
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .choice-btn {
-      width: 100%; padding: 16px; font-size: 1.05rem; font-weight: bold; text-align: left;
-      background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px; cursor: pointer;
-      display: flex; align-items: center; gap: 12px; transition: 0.15s;
+      width: 100%; padding: 28px 0; font-size: 2.2rem; font-weight: bold;
+      background: #f8fafc; color: #1e3a5f; border: 2px solid #cbd5e1;
+      border-radius: 14px; cursor: pointer; transition: 0.15s;
     }
     .choice-btn.selected {
       background: #1e3a5f; color: #fff; border-color: #1e3a5f;
     }
     .choice-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-    .badge {
-      display: inline-flex; justify-content: center; align-items: center;
-      width: 30px; height: 30px; border-radius: 50%; background: #e2e8f0; color: #1e3a5f;
-      font-weight: bold; flex-shrink: 0;
-    }
-    .choice-btn.selected .badge { background: #d4af37; color: #fff; }
     .status-box {
       padding: 20px; border-radius: 12px; background: #f8fafc; margin-top: 12px;
     }
-    .correct { background: #dcfce7; color: #166534; font-weight: bold; font-size: 1.3rem; }
-    .wrong { background: #fee2e2; color: #991b1b; font-weight: bold; font-size: 1.3rem; }
+    .correct { background: #dcfce7; color: #166534; font-weight: bold; font-size: 1.4rem; }
+    .wrong { background: #fee2e2; color: #991b1b; font-weight: bold; font-size: 1.4rem; }
     .user-bar {
       width: 100%; max-width: 480px; display: flex; justify-content: space-between;
       align-items: center; font-size: 0.85rem; color: #555; margin-bottom: 10px;
@@ -81,7 +74,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const LABELS = ["A", "B", "C", "D"];
 
     let userId = localStorage.getItem("quiz_uid");
     if (!userId) {
@@ -123,19 +115,16 @@
       if (next && next.trim()) registerUser(next);
     });
 
-    // すでに名前登録済みなら自動復帰
     if (userName) {
       set(ref(db, `users/${userId}`), { name: userName, joinedAt: Date.now() });
       showGame();
     }
 
-    // 進行状態のリアルタイム監視
     onValue(ref(db, "state"), (snap) => {
       currentState = snap.val() || { phase: "waiting", questionIndex: 0 };
       render();
     });
 
-    // 自分の回答履歴を同期（リロード対策）
     onValue(ref(db, "answers"), (snap) => {
       const all = snap.val() || {};
       myAnswers = {};
@@ -174,9 +163,6 @@
 
       if (phase === "open") {
         const myChoice = myAnswers[questionIndex];
-        const header = document.createElement("div");
-        header.className = "q-header";
-        header.textContent = `第 ${questionIndex + 1} 問 / 全 ${QUESTIONS.length} 問`;
 
         const qText = document.createElement("div");
         qText.className = "q-text";
@@ -188,33 +174,28 @@
         q.choices.forEach((c, idx) => {
           const btn = document.createElement("button");
           btn.className = "choice-btn" + (myChoice === idx ? " selected" : "");
-          const badge = document.createElement("span");
-          badge.className = "badge";
-          badge.textContent = LABELS[idx];
-          const label = document.createElement("span");
-          label.textContent = c;
-          btn.append(badge, label);
+          btn.textContent = c;
           btn.onclick = () => selectChoice(questionIndex, idx);
           list.appendChild(btn);
         });
 
         const note = document.createElement("p");
         note.className = "sub";
-        note.style.marginTop = "16px";
-        note.textContent = myChoice !== undefined ? "回答済み（締切前なら変更できます）" : "答えをタップしてください";
+        note.style.marginTop = "20px";
+        note.textContent = myChoice !== undefined ? `「${q.choices[myChoice]}」を選択中（締切前なら変更できます）` : "答えの番号をタップしてください";
 
-        contentArea.append(header, qText, list, note);
+        contentArea.append(qText, list, note);
         return;
       }
 
       if (phase === "closed") {
         const myChoice = myAnswers[questionIndex];
-        const chosenText = myChoice !== undefined ? `${LABELS[myChoice]}：${q.choices[myChoice]}` : "未回答";
+        const chosenText = myChoice !== undefined ? q.choices[myChoice] : "未回答";
         contentArea.innerHTML = `
-          <div class="q-header">第 ${questionIndex + 1} 問 回答締切</div>
+          <div class="q-text">${q.text}</div>
           <div class="status-box">
             <p style="margin:0 0 8px;">あなたの回答</p>
-            <strong style="font-size:1.2rem;"></strong>
+            <strong style="font-size:2rem; color:#1e3a5f;"></strong>
           </div>
           <p class="sub" style="margin-top:16px;">スクリーンで正解発表をお待ちください！</p>
         `;
@@ -226,15 +207,13 @@
         const myChoice = myAnswers[questionIndex];
         const isCorrect = myChoice === q.answer;
         contentArea.innerHTML = `
-          <div class="q-header">第 ${questionIndex + 1} 問 正解発表</div>
+          <div class="q-text">${q.text}</div>
           <div class="status-box ${isCorrect ? "correct" : "wrong"}">
             ${isCorrect ? "⭕ 正解！" : "❌ ざんねん…"}
           </div>
-          <p style="margin-top:16px; font-weight:bold;">正解：<span id="ansText"></span></p>
-          <p class="sub" id="expText"></p>
+          <p style="margin-top:20px; font-size:1.3rem; font-weight:bold;">正解：<span id="ansText"></span></p>
         `;
-        contentArea.querySelector("#ansText").textContent = `${LABELS[q.answer]}：${q.choices[q.answer]}`;
-        contentArea.querySelector("#expText").textContent = q.explanation || "";
+        contentArea.querySelector("#ansText").textContent = q.choices[q.answer];
         return;
       }
 
@@ -255,6 +234,24 @@
         scores.forEach((s, i) => {
           if (i > 0 && s.score < scores[i - 1].score) rank = i + 1;
           if (s.uid === userId) { myRank = rank; myScore = s.score; }
+        });
+
+        contentArea.innerHTML = `
+          <h1>結果発表！</h1>
+          <div class="status-box">
+            <p style="margin:0;">あなたの成績</p>
+            <div style="font-size:2rem; font-weight:bold; color:#1e3a5f; margin:8px 0;">
+              ${myRank}位 <span style="font-size:1.1rem;">（${myScore} / ${QUESTIONS.length}問正解）</span>
+            </div>
+          </div>
+          <p class="sub" style="margin-top:16px;">スクリーンをご覧ください！</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
+yScore = s.score; }
         });
 
         contentArea.innerHTML = `
